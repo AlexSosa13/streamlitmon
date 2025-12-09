@@ -23,7 +23,7 @@ st.markdown("---")
 def load_and_preprocess_data():
     """Carga y realiza la limpieza y cálculos esenciales del DataFrame."""
     try:
-        df = pd.read_csv("/home/antonio/Escritorio/ml-project-template/Loyola/visual/pokedex_completa_full.csv")
+        df = pd.read_csv("pokedex_completa_full.csv")
     except FileNotFoundError:
         st.error("Error: No se encontró el archivo 'pokedex_completa_full.csv'. Por favor, comprueba que el archivo se encuentra en la carpeta.")
         st.stop()
@@ -90,9 +90,121 @@ st.sidebar.info(f"**Pokémon seleccionados:** {len(df_filtered)}")
 # --- 3. SECCIÓN DE VISUALIZACIONES ---
 
 st.header("Visualizaciones")
-st.markdown("Aquí añadiremos las visualizaciones para responder preguntas varias.")
+st.markdown("Analizando las fortalezas y debilidades según el tipo de Pokémon.")
+
+# 1. Preparar los datos: Agrupar por Tipo Primario y sacar el promedio
+# Definimos las columnas numéricas que queremos analizar
+cols_to_analyze = ['stat_hp', 'stat_attack', 'stat_defense', 'stat_special-attack', 'stat_special-defense', 'stat_speed']
+
+# Creamos una tabla pivotante (agrupada) con los datos filtrados
+heatmap_data = df_filtered.groupby('primary_type')[cols_to_analyze].mean()
+
+# 2. Crear el gráfico
+fig_heatmap = px.imshow(
+    heatmap_data,
+    text_auto=".0f",                 # Muestra el número entero dentro de la celda
+    aspect="auto",                   # Ajusta el ancho automáticamente
+    color_continuous_scale="RdBu",# Escala de colores (puedes probar 'Magma' o 'RdBu')
+    title="Promedio de Estadísticas Base por Tipo"
+)
+
+# Mejora visual: Mover las etiquetas del eje X arriba para facilitar la lectura
+fig_heatmap.update_xaxes(side="top")
+fig_heatmap.update_layout(yaxis_title="Tipo Primario")
+
+# 3. Mostrar el gráfico en Streamlit
+st.plotly_chart(fig_heatmap, use_container_width=True)
 
 st.markdown("---")
+
+st.markdown("Comparando la brecha de poder entre Pokémon especiales y normales")
+
+# 1. INTERACTIVIDAD: Selector de modo de comparación
+comparison_mode = st.radio(
+    "¿Qué grupo de 'Normales' quieres comparar?",
+    ["Todos los Normales", 
+     "Completamente Evolucionados"],
+    index=1, # Por defecto seleccionamos la justa
+    horizontal=True
+)
+
+# 2. LÓGICA DE FILTRADO
+# Crear copias para no afectar el dataframe global
+df_legendary = df_filtered[df_filtered['is_legendary'] == True].copy()
+df_mythical = df_filtered[df_filtered['is_mythical'] == True].copy()
+df_normal = df_filtered[(df_filtered['is_legendary'] == False) & (df_filtered['is_mythical'] == 0)].copy()
+
+# Etiquetar categorías
+df_legendary['Category'] = 'Legendario'
+df_mythical['Category'] = 'Mítico'
+
+if "Completamente Evolucionados" in comparison_mode:
+    df_normal = df_normal[df_normal['can_evolve'] == False]
+    df_normal['Category'] = 'Normal (Max. Potencial)'
+else:
+    df_normal['Category'] = 'Normal (Todos)'
+
+# Unimos todo en un dataframe temporal para calcular medias
+df_comparison = pd.concat([df_legendary, df_mythical, df_normal])
+
+# 3. PREPARACIÓN DE DATOS PARA GRÁFICO (PANDAS AVANZADO)
+# Columnas que queremos analizar
+stat_cols = ['stat_hp', 'stat_attack', 'stat_defense', 'stat_special-attack', 'stat_special-defense', 'stat_speed']
+
+# Calculamos la media agrupada por Categoría
+mean_legendary_stats = df_legendary[stat_cols].mean()
+mean_mythical_stats = df_mythical[stat_cols].mean()
+mean_normal_stats = df_normal[stat_cols].mean()
+
+stats_df = pd.DataFrame({
+    'Category': ['Legendario'] * len(stat_cols) + ['Mítico'] * len(stat_cols) + ['Normal'] * len(stat_cols),
+    'Statistic': list(mean_legendary_stats.index) * 3,
+    'Mean_Value': list(mean_legendary_stats.values) + list(mean_mythical_stats.values) + list(mean_normal_stats.values)
+})
+
+# 4. GRÁFICO DE BARRAS AGRUPADAS
+fig_comp = px.bar(
+    stats_df,
+    x='Mean_Value',
+    y='Statistic',
+    color='Category',
+    barmode='group',
+    orientation='h',
+    title=f"Comparativa de Stats Medios ({comparison_mode})",
+    color_discrete_map={ # Colores personalizados para identificar rápido
+        'Legendario': '#FFD700',
+        'Mítico': '#FF69B4',
+        'Normal': '#A9A9A9',
+    }
+)
+
+fig_comp.update_layout(xaxis_title="Valor Promedio", yaxis_title="Estadística")
+st.plotly_chart(fig_comp, use_container_width=True)
+
+# 5. GRÁFICO DE TOTALES (SUMA DE PROMEDIOS)
+total_mean_legendary_stats = mean_legendary_stats.sum()
+total_mean_mythical_stats = mean_mythical_stats.sum()
+total_mean_normal_stats = mean_normal_stats.sum()
+
+total_stats_sum_df = pd.DataFrame({
+    'Category': ['Legendario', 'Mítico', 'Normal'],
+    'Total_Mean_Stats': [total_mean_legendary_stats, total_mean_mythical_stats, total_mean_normal_stats]
+})
+
+fig_total = px.bar(
+    total_stats_sum_df,
+    x='Total_Mean_Stats',
+    y='Category',
+    color='Category',
+    orientation='h',
+    title="Poder Total Promedio (Suma de todas las stats)",
+    color_discrete_map={ # Colores personalizados para identificar rápido
+        'Legendario': '#FFD700',
+        'Mítico': '#FF69B4',
+        'Normal': '#A9A9A9',
+    }
+)
+st.plotly_chart(fig_total, use_container_width=True)
 
 # --- 4. DETALLE DE POKÉMON (Utilidad y Evitar Errores) ---
 
@@ -133,132 +245,3 @@ if pokemon_name:
         display_stat_progress('stat_special-attack', 'Special Attack')
         display_stat_progress('stat_special-defense', 'Special Defense')
         display_stat_progress('stat_speed', 'Speed')
-        
-        
-### ¿Mejor legendarios, míticos y normales?
-
-df_legendary = df[df['is_legendary'] == True].copy()
-df_mythical = df[df['is_mythical'] == True].copy()
-df_normal = df[(df['is_legendary'] == False) &
-                              (df['is_mythical'] == False)].copy()
-
-print("\n--- Pokémon Legendarios ---")
-print(f"Número de Pokémon legendarios: {len(df_legendary)}")
-
-print("\n--- Pokémon Míticos ---")
-print(f"Número de Pokémon Míticos: {len(df_mythical)}")
-
-print("\n--- Pokémon No Legendarios ---")
-print(f"Número de Pokémon normales: {len(df_normal)}")
-
-stat_cols = ['stat_hp', 'stat_attack', 'stat_defense', 'stat_special-attack', 'stat_special-defense', 'stat_speed']
-
-#Cálculo de medias
-mean_legendary_stats = df_legendary[stat_cols].mean()
-mean_mythical_stats = df_mythical[stat_cols].mean()
-mean_normal_stats = df_normal[stat_cols].mean()
-
-# Crear DataFrame para visualización
-stats_df = pd.DataFrame({
-    'Category': ['Legendario'] * len(stat_cols) + ['Mítico'] * len(stat_cols) + ['Normal'] * len(stat_cols),
-    'Statistic': list(mean_legendary_stats.index) * 3,
-    'Mean_Value': list(mean_legendary_stats.values) + list(mean_mythical_stats.values) + list(mean_normal_stats.values)
-})
-
-fig = px.bar(stats_df,
-             x='Mean_Value',
-             y='Statistic',
-             color='Category',
-             barmode='group',
-             orientation='h',
-             title='Media de los Pokémons por estadisticas y categorías (Legendario, Mistico, Normal)',
-             labels={'Mean_Value': 'Valor medio', 'Statistic': 'Estadísticas Pokémon'},
-             height=500)
-
-fig.update_layout(xaxis_title='Valor medio',
-                  yaxis_title='Esdadísticas Pokémons',
-                  legend_title='Tipos de Pokémons')
-
-fig.show()
-
-# Mostrar la media total
-total_mean_legendary_stats = mean_legendary_stats.sum()
-total_mean_mythical_stats = mean_mythical_stats.sum()
-total_mean_normal_stats = mean_normal_stats.sum()
-
-total_stats_sum_df = pd.DataFrame({
-    'Category': ['Legendario', 'Mítico', 'Normal'],
-    'Total_Mean_Stats': [total_mean_legendary_stats, total_mean_mythical_stats, total_mean_normal_stats]
-})
-
-fig_horizontal = px.bar(total_stats_sum_df,
-             x='Total_Mean_Stats',
-             y='Category',
-             color='Category',
-             orientation='h',
-             title='Suma Total de Estadísticas Promedio por Categoría',
-             labels={'Total_Mean_Stats': 'Suma Total de Estadísticas Promedio', 'Category': 'Categoría de Pokémon'},
-             height=400)
-
-fig_horizontal.update_layout(xaxis_title='Suma Total de Estadísticas Promedio',
-                             yaxis_title='Categoría de Pokémon',
-                             legend_title='Categoría')
-
-fig_horizontal.show()
-
-# Sin embargo está muy desbalanceado para los pokes normales que cuentan con primeras evoluciones
-# y los legendarios y míticos no.
-
-df_normal_no_evolve = df_normal[df_normal['can_evolve'] == False].copy()
-
-print("\n--- Pokémon Normales (sin evolución) ---")
-print(f"Número de Pokémon normales que no evolucionan: {len(df_normal_no_evolve)}")
-
-mean_normal_no_evolve_stats = df_normal_no_evolve[stat_cols].mean()
-
-
-stats_df_new = pd.DataFrame({
-    'Category': ['Legendario'] * len(stat_cols) + ['Mítico'] * len(stat_cols) + ['Normal (No Evol.)'] * len(stat_cols),
-    'Statistic': list(mean_legendary_stats.index) * 3,
-    'Mean_Value': list(mean_legendary_stats.values) + list(mean_mythical_stats.values) + list(mean_normal_no_evolve_stats.values)
-})
-
-# Create the first interactive bar chart (Mean_Value on X, Statistic on Y)
-fig_new_1 = px.bar(stats_df_new,
-             x='Mean_Value',
-             y='Statistic',
-             color='Category',
-             barmode='group',
-             orientation='h',
-             title='Media de los Pokémons por estadisticas y categorías (Legendario, Mistico, Normal (No evoluciona))',
-             labels={'Mean_Value': 'Valor medio', 'Statistic': 'Estadísticas Pokémons'},
-             height=500)
-
-fig_new_1.update_layout(xaxis_title='Valor medio',
-                  yaxis_title='Estadísticas Pokémons',
-                  legend_title='Tipo de Pokémon')
-
-fig_new_1.show()
-
-# Mostrar la media total
-total_mean_normal_no_evolve_stats = mean_normal_no_evolve_stats.sum()
-
-total_stats_sum_df_new = pd.DataFrame({
-    'Category': ['Legendario', 'Mítico', 'Normal (No Evol.)'],
-    'Total_Mean_Stats': [total_mean_legendary_stats, total_mean_mythical_stats, total_mean_normal_no_evolve_stats]
-})
-
-fig_new_2 = px.bar(total_stats_sum_df_new,
-             x='Total_Mean_Stats',
-             y='Category',
-             color='Category',
-             orientation='h',
-             title='Suma Total de Estadísticas Promedio por Categoría',
-             labels={'Total_Mean_Stats': 'Suma Total de Estadísticas Promedio', 'Category': 'Categoría de Pokémon'},
-             height=400)
-
-fig_new_2.update_layout(xaxis_title='Suma Total de Estadísticas Promedio',
-                             yaxis_title='Categoría de Pokémon',
-                             legend_title='Categoría')
-
-fig_new_2.show()
