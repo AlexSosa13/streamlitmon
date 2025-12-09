@@ -171,11 +171,6 @@ fig_comp = px.bar(
     barmode='group',
     orientation='h',
     title=f"Comparativa de Stats Medios ({comparison_mode})",
-    color_discrete_map={ # Colores personalizados para identificar rápido
-        'Legendario': '#FFD700',
-        'Mítico': '#FF69B4',
-        'Normal': '#A9A9A9',
-    }
 )
 
 fig_comp.update_layout(xaxis_title="Valor Promedio", yaxis_title="Estadística")
@@ -198,11 +193,6 @@ fig_total = px.bar(
     color='Category',
     orientation='h',
     title="Poder Total Promedio (Suma de todas las stats)",
-    color_discrete_map={ # Colores personalizados para identificar rápido
-        'Legendario': '#FFD700',
-        'Mítico': '#FF69B4',
-        'Normal': '#A9A9A9',
-    }
 )
 st.plotly_chart(fig_total, use_container_width=True)
 
