@@ -95,7 +95,9 @@ st.sidebar.info(f"**Pokémon seleccionados:** {len(df_filtered)}")
 # --- 3. SECCIÓN DE VISUALIZACIONES ---
 
 st.header("Visualizaciones")
-st.markdown("Analizando las fortalezas y debilidades según el tipo de Pokémon.")
+st.markdown("---")
+
+st.subheader("Analizando las fortalezas y debilidades según el tipo de Pokémon.")
 
 # 1. Preparar los datos: Agrupar por Tipo Primario y sacar el promedio
 # Definimos las columnas numéricas que queremos analizar (YA SIN prefijo stat_)
@@ -121,8 +123,7 @@ fig_heatmap.update_layout(yaxis_title="Tipo Primario")
 st.plotly_chart(fig_heatmap, use_container_width=True)
 
 st.markdown("---")
-
-st.markdown("Comparando la brecha de poder entre Pokémon especiales y normales")
+st.subheader("Comparando la brecha de poder entre Pokémon especiales y normales")
 
 # 1. INTERACTIVIDAD: Selector de modo de comparación
 comparison_mode = st.radio(
@@ -201,11 +202,12 @@ fig_total = px.bar(
     orientation='h',
     title="Poder Total Promedio (Suma de todas las stats)",
 )
+fig_total.update_layout(xaxis_title="Stats Totales Promedios")
 st.plotly_chart(fig_total, use_container_width=True)
-
 
 # --- 4. MEJOR POKEMON POR TIPO Y STAT ---
 
+st.markdown("---")
 st.subheader("Mejor Pokémon por tipo y estadística")
 st.markdown(
     "Para cada estadística base, se muestra el Pokémon con mejor valor "
@@ -224,7 +226,7 @@ best_stat_cols = [
     'Total Stats' # Suma de las stats
 ]
 
-# 1️⃣ Selector de estadística
+# 1️. Selector de estadística
 selected_stat_key = st.selectbox(
     "Selecciona la estadística a analizar:",
     options=best_stat_cols
@@ -233,17 +235,18 @@ selected_stat_key = st.selectbox(
 # Determinar la columna real del DataFrame
 stat_column = selected_stat_key if selected_stat_key != "Total Stats" else "total_stats"
 
-# 2️⃣ Checkbox para usar tipo secundario o primario
+# 2️. Checkbox para usar tipo secundario o primario
 use_secondary = st.checkbox(
-    "Usar tipo secundario en lugar del tipo primario",
+    "Usar Tipo Secundario",
     value=False
 )
 
 type_col = "secondary_type" if use_secondary else "primary_type"
+type_col_clean = "Secundario" if use_secondary else "Primario"
 
-# 3️⃣ Checkbox para usar el mínimo en vez del máximo
+# 3️. Checkbox para usar el mínimo en vez del máximo
 use_min = st.checkbox(
-    "Mostrar el peor Pokémon por estadística",
+    "Mostrar Peor Pokémon por Estadística",
     value=False
 )
 
@@ -260,7 +263,7 @@ if not df_filtered[df_filtered['is_mythical'] == True].empty:
 
 records = []
 
-# 4️⃣ Calcular mejor/peor Pokémon por grupo
+# 4️. Calcular mejor/peor Pokémon por grupo
 for g in all_groups:
     if g == 'Legendario':
         subset = df_filtered[df_filtered['is_legendary'] == True]
@@ -291,10 +294,10 @@ for g in all_groups:
 best_by_type_df = pd.DataFrame(records)
 
 
-# 5️⃣ Orden dinámico: mayor → menor (o menor → mayor)
+# 5️. Orden dinámico: mayor → menor (o menor → mayor)
 plot_df = best_by_type_df.sort_values("BestValue", ascending=use_min == True)
 
-# 6️⃣ Colores fijos por tipo
+# 6️. Colores fijos por tipo
 color_map = {
     "normal": "#A8A77A",
     "fire": "#EE8130",
@@ -318,15 +321,15 @@ color_map = {
     "Mítico": "#FF6FD8"
 }
 
-# 7️⃣ Crear gráfica
-modo_texto = "menor" if use_min else "mayor"
+# 7️. Crear gráfica
+modo_texto = "Menor" if use_min else "Mayor"
 fig_best = px.bar(
     plot_df,
     x="BestValue",
     y="Group",
     orientation="h",
     text="Pokemon",
-    title=f"{'Peor' if use_min else 'Mejor'} Pokémon por grupo para {selected_stat_key}"
+    title=f"{modo_texto} Pokémon por Grupo para {selected_stat_key} (Tipo {type_col_clean})"
 )
 
 fig_best.update_traces(
@@ -343,7 +346,7 @@ fig_best.update_yaxes(
 # Layout
 fig_best.update_layout(
     showlegend=False,
-    xaxis_title=f"Valor de la estadística ({modo_texto})",
+    xaxis_title=f"Valor de la Estadística ({modo_texto})",
     yaxis_title="Tipo / Grupo",
     height=600
 )
@@ -351,10 +354,9 @@ fig_best.update_layout(
 st.plotly_chart(fig_best, use_container_width=True)
 
 
-
-
 # --- 5. DETALLE DE POKÉMON (Utilidad y Evitar Errores) ---
 
+st.markdown("---")
 st.header("Detalle Individual de Pokémon")
 st.markdown("Esta sección permite ver los datos de un Pokémon individual (usado para probar la carga de datos).")
 
