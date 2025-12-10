@@ -11,10 +11,6 @@ st.set_page_config(
 
 # Título y encabezado principal
 st.title("Tablero de Análisis de Pokémon - StreamlitMon")
-st.markdown("""
-Bienvenido al esqueleto del dashboard. Aquí escribiremos el código para cada visualización de datos.
-""")
-
 st.markdown("---")
 
 # --- 1. CARGA Y PRE-PROCESAMIENTO DE DATOS ---
@@ -156,7 +152,7 @@ else:
 # Unimos todo en un dataframe temporal para calcular medias
 df_comparison = pd.concat([df_legendary, df_mythical, df_normal])
 
-# 3. PREPARACIÓN DE DATOS PARA GRÁFICO (PANDAS AVANZADO)
+# 3. PREPARACIÓN DE DATOS PARA GRÁFICO
 # Columnas que queremos analizar (SIN stat_)
 stat_cols = ['HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
 
@@ -207,8 +203,8 @@ fig_total = px.bar(
 )
 st.plotly_chart(fig_total, use_container_width=True)
 
-# --- 4. MEJOR POKEMON POR TIPO Y STAT ---
 
+# --- 4. MEJOR POKEMON POR TIPO Y STAT ---
 
 st.subheader("Mejor Pokémon por tipo y estadística")
 st.markdown(
@@ -225,7 +221,7 @@ best_stat_cols = [
     'Special Attack',
     'Special Defense',
     'Speed',
-    'Total Stats'  # 👈 opción de suma de todas las stats
+    'Total Stats' # Suma de las stats
 ]
 
 # 1️⃣ Selector de estadística
@@ -277,9 +273,6 @@ for g in all_groups:
             (df_filtered['is_mythical'] == False)
         ]
 
-    if subset.empty or stat_column not in subset.columns:
-        continue
-
     # Elegir índice según máximo o mínimo
     if use_min:
         idx = subset[stat_column].idxmin()
@@ -297,67 +290,66 @@ for g in all_groups:
 # DataFrame con resultados
 best_by_type_df = pd.DataFrame(records)
 
-if not best_by_type_df.empty:
-    # 5️⃣ Orden dinámico: mayor → menor (o menor → mayor)
-    plot_df = best_by_type_df.sort_values("BestValue", ascending=use_min == True)
 
-    # 6️⃣ Colores fijos por tipo
-    color_map = {
-        "normal": "#A8A77A",
-        "fire": "#EE8130",
-        "water": "#6390F0",
-        "electric": "#F7D02C",
-        "grass": "#7AC74C",
-        "ice": "#96D9D6",
-        "fighting": "#C22E28",
-        "poison": "#A33EA1",
-        "ground": "#E2BF65",
-        "flying": "#A98FF3",
-        "psychic": "#F95587",
-        "bug": "#A6B91A",
-        "rock": "#B6A136",
-        "ghost": "#735797",
-        "dragon": "#6F35FC",
-        "dark": "#705746",
-        "steel": "#B7B7CE",
-        "fairy": "#D685AD",
-        "Legendario": "#777777",
-        "Mítico": "#FF6FD8"
-    }
+# 5️⃣ Orden dinámico: mayor → menor (o menor → mayor)
+plot_df = best_by_type_df.sort_values("BestValue", ascending=use_min == True)
 
-    # 7️⃣ Crear gráfica
-    modo_texto = "menor" if use_min else "mayor"
-    fig_best = px.bar(
-        plot_df,
-        x="BestValue",
-        y="Group",
-        orientation="h",
-        text="Pokemon",
-        title=f"{'Peor' if use_min else 'Mejor'} Pokémon por grupo para {selected_stat_key}"
-    )
+# 6️⃣ Colores fijos por tipo
+color_map = {
+    "normal": "#A8A77A",
+    "fire": "#EE8130",
+    "water": "#6390F0",
+    "electric": "#F7D02C",
+    "grass": "#7AC74C",
+    "ice": "#96D9D6",
+    "fighting": "#C22E28",
+    "poison": "#A33EA1",
+    "ground": "#E2BF65",
+    "flying": "#A98FF3",
+    "psychic": "#F95587",
+    "bug": "#A6B91A",
+    "rock": "#B6A136",
+    "ghost": "#735797",
+    "dragon": "#6F35FC",
+    "dark": "#705746",
+    "steel": "#B7B7CE",
+    "fairy": "#D685AD",
+    "Legendario": "#777777",
+    "Mítico": "#FF6FD8"
+}
 
-    fig_best.update_traces(
-        marker_color=[color_map[g] for g in plot_df["Group"]],
-        textposition="outside"
-    )
+# 7️⃣ Crear gráfica
+modo_texto = "menor" if use_min else "mayor"
+fig_best = px.bar(
+    plot_df,
+    x="BestValue",
+    y="Group",
+    orientation="h",
+    text="Pokemon",
+    title=f"{'Peor' if use_min else 'Mejor'} Pokémon por grupo para {selected_stat_key}"
+)
 
-    # Orden del eje Y según el ranking
-    fig_best.update_yaxes(
-        categoryorder="array",
-        categoryarray=plot_df["Group"].tolist()[::-1]  # invertido por gráfica horizontal
-    )
+fig_best.update_traces(
+    marker_color=[color_map[g] for g in plot_df["Group"]],
+    textposition="outside"
+)
 
-    # Layout
-    fig_best.update_layout(
-        showlegend=False,
-        xaxis_title=f"Valor de la estadística ({modo_texto})",
-        yaxis_title="Tipo / Grupo",
-        height=600
-    )
+# Orden del eje Y según el ranking
+fig_best.update_yaxes(
+    categoryorder="array",
+    categoryarray=plot_df["Group"].tolist()[::-1]  # invertido por gráfica horizontal
+)
 
-    st.plotly_chart(fig_best, use_container_width=True)
-else:
-    st.info("No hay datos suficientes para mostrar el ranking con los filtros actuales.")
+# Layout
+fig_best.update_layout(
+    showlegend=False,
+    xaxis_title=f"Valor de la estadística ({modo_texto})",
+    yaxis_title="Tipo / Grupo",
+    height=600
+)
+
+st.plotly_chart(fig_best, use_container_width=True)
+
 
 
 
@@ -393,7 +385,7 @@ if pokemon_name:
         st.write(f"**Tipo Primario:** {row['primary_type']}")
         st.write(f"**Tipo Secundario:** {row['secondary_type']}")
         st.write(f"**Generación:** {row['generation']}")
-        st.write(f"**Categoría:** {category_label}")  # 👈 NUEVA LÍNEA
+        st.write(f"**Categoría:** {category_label}")
         
         st.markdown("##### Estadísticas Base:")
         
